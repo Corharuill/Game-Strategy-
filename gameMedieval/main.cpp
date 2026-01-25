@@ -1,244 +1,165 @@
 ﻿#include <iostream>
-#include <vector>
-#include <cstdlib>
 #include <array>
+#include <conio.h>
+#include <windows.h>
+#include <vector>
+#include <memory>
 
 
-class Field
-{
+class Field {
 public:
-     int WIDHT = 100; // ширина 
-     int HEIGHT = 100; // высота
+    static constexpr int WIDTH = 50;
+    static constexpr int HEIGHT = 25;
 
-    std::array<std::array<char, 50>, 50> arr;
-    int x$ = 1, y$ = 1;
-    Field()
-    {
+    std::array<std::array<char, WIDTH>, HEIGHT> arr{}; //можно везде заменить цыфры на переменные 
 
-   //конструктор 
-         for (auto& row : arr) {
-              row.fill(' ');
-    }  //заполнение пробелами
-        for (int i = 0; i < 50; i++)
-        {
-            arr[0][i] = '-';
-            arr[49][i] = '+';
-        }
-             for (int i = 1; i < 49; i++)
-            {
-                 arr[i][0] = '1';
-                 arr[i][49] = '2';
-
-
-            }
+    Field() {
+        initField();
     }
-  
 
-    void drawField(int x, int y)
-    {
-        // Восстанавливаем фон и рамку
-        for (auto& row : arr) {
+    void initField() {
+        for (auto& row : arr)
             row.fill(' ');
-        }
-        for (int i = 0; i < 50; i++) {
+
+        for (int i = 0; i < WIDTH; i++) {
             arr[0][i] = '-';
-            arr[49][i] = '+';
+            arr[HEIGHT - 1][i] = '+';
         }
-        for (int i = 1; i < 49; i++) {
+
+        for (int i = 1; i < HEIGHT - 1; i++) {
             arr[i][0] = '1';
-            arr[i][49] = '2';
+            arr[i][WIDTH - 1] = '2';
         }
+    }
 
-        // Ставим '$' на новые координаты
-        if (x >= 1 && x <= 48 && y >= 1 && y <= 48) {
-            arr[y][x] = '$';
-        }
+    void drawEnemy(int x, int y) {
+        arr[y][x] = '%';
+    }
+    void drawPlayer(int x, int y) {
+        arr[y][x] = '$';
+    }
 
-        // Очистка экрана
-        system("cls");
+    void clearPlayer(int x, int y) {
+        arr[y][x] = ' ';
+    }
 
-        // Вывод поля
-        for (int i = 0; i < 50; i++) {
-            for (int j = 0; j < 50; j++) {
-                std::cout << arr[i][j];
-            }
+    void gotoXY(int x, int y) {
+        COORD pos{ (SHORT)x, (SHORT)y };
+        SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos); //вывод в консоль в конкретную кординатную позицию ( стандаотный вывод под виндоус , н оне сработает на линуксе, пос это вывод позиции )
+    }
+
+    void render() {
+        gotoXY(0, 0);
+        for (auto& row : arr) {
+            for (char c : row)
+                std::cout << c;
             std::cout << '\n';
         }
-        std::cout << "\nУправление: W, A, S, D. Нажмите 'q' для выхода.\n";
+        std::cout << "\nW A S D — движение | Q — выход\n";
     }
-    //рисует поле
-    //void drawField(int x, int y)
-    //{
-    //    system("cls");
-    //    
-    //    arr[x$][y$] = ' ';
-    //    x$ = x; // потому что определено в классе 
-    //    y$ = y; 
-    //    arr[x][y] = '$';
-
-    //    for (int i = 0; i < 50; i ++)
-    //    {
-    //        for (int j = 0; j < 50; j++)
-    //        {
-    //            std::cout << arr[i][j];
-
-    //        }
-    //         std::cout << "\n";
-    //    }
-        //for (int x = 0; x <= WIDHT; x++)
-        //{
-        //    for (int y = 0; y <= HEIGHT; y++)
-        //    {
-        //        //  левый бок
-        //        if (y == 0)
-        //        {
-        //            std::cout << "#";
-        //        }
-        //        //  верхняя часть
-        //        else if (x == 0)
-        //        {
-        //            std::cout << "1";
-        //        }
-        //        //  нижняя часть
-        //        else if (x == HEIGHT)
-        //        {
-        //            std::cout << "2";
-        //        }
-        //        // пробелы
-        //        else
-        //        {
-        //            std::cout << " ";
-        //        }
-
-        //    }
-        //    // правая часть
-        //    std::cout << "@" << std::endl;
-        //}
-    }
-
 };
 
+// ---------- ЮНИТЫ ----------
 class Unit {
 public:
     int attack = 0;
     int protection = 0;
     int health = 0;
-
-    virtual ~Unit() = default; // виртуальный деструктор для полиморфизма
+    virtual ~Unit() = default;// виртуальный деструктор для полиморфизма
 };
 
-class infantry : public Unit
-{
+class Infantry : public Unit {
 public:
-    int attack = 1;
-    int protection = 2;
-    int health = 10;
+    Infantry() { attack = 1; protection = 2; health = 10; }
 };
 
-class cavalry : public Unit
-{
+class Cavalry : public Unit {
 public:
-    int attack = 3;
-    int protection = 3;
-    int health = 15;
+    Cavalry() { attack = 3; protection = 3; health = 15; }
 };
 
 class Army {
-private:
-    
 public:
-    std::vector<std::unique_ptr<infantry>> infantryUnits;
-    std::vector<std::unique_ptr<cavalry>> cavalryUnits;
+    std::vector<std::unique_ptr<Unit>> units;
 };
 
-class Hero {
-private:
+// ---------- ENEMY ----------
+
+class Enemy {
+public:
+    int x = 15;
+    int y = 15; 
+
     std::string name;
-   
-public:
-    int experience = 0; 
-    int gold;
-    std::string skills;
-    Army army; 
-
-    void printStats() {
-        std::cout << "Hero [HP: " << experience << ", Gold: " << gold << "]";
-    }
-    
+    int experience = 0;
+    int gold = 0;
+    Army army;
 };
 
+// ---------- HERO ----------
+class Hero {
+public:
+    std::string name;
+    int experience = 0;
+    int gold = 0;
+    Army army;
+};
 
-int main()
-{
+void hideCursor() {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO cursorInfo;
+    GetConsoleCursorInfo(hConsole, &cursorInfo);
+    cursorInfo.bVisible = false;
+    SetConsoleCursorInfo(hConsole, &cursorInfo);
+} //убирает курсор  
+// ---------- MAIN ----------
+int main() {
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(nullptr);
+
+    hideCursor();
+    Enemy enemy;
     Field field;
     int x = 10, y = 10;
     char key;
 
+    field.drawPlayer(x, y);
+    field.drawEnemy(enemy.x, enemy.y);
+    
+    
+    field.render(); //перерисовывает консоль с 0 позиции 
+    
+   
     while (true) {
-        field.drawField(x, y);
+        int oldX = x, oldY = y; 
+
 
         // Проверяем, нажата ли клавиша
-        if (_kbhit()) {
+        if (_kbhit()) { 
             key = _getch(); // читаем символ без ожидания Enter
 
             switch (key) {
-            case 'w': case 'W':
-                if (y > 1) y--;
-                break;
-            case 's': case 'S':
-                if (y < 48) y++;
-                break;
-            case 'a': case 'A':
-                if (x > 1) x--;
-                break;
-            case 'd': case 'D':
-                if (x < 48) x++;
-                break;
-            case 'q': case 'Q':
-                return 0;
-            default:
-                break;
+            case 'w': case 'W': if (y > 1) y--; break;
+            case 's': case 'S': if (y < Field::HEIGHT - 2) y++; break;
+            case 'a': case 'A': if (x > 1) x--; break;
+            case 'd': case 'D': if (x < Field::WIDTH - 2) x++; break;
+            case 'q': case 'Q': return 0;
             }
         }
 
-        // Небольшая задержка, чтобы не грузить процессор
-        Sleep(50); // 50 мс ≈ 20 FPS
+        if (oldX != x || oldY != y) {
+            field.clearPlayer(oldX, oldY);
+            field.drawPlayer(x, y);
+            field.drawEnemy(enemy.x, enemy.y);
+            field.render();
+
+        }
+
+        Sleep(50); // ≈20 FPS Небольшая задержка, чтобы не грузить процессор
     }
-
-    return 0;
+    //необходимо добавить метод размещения других персонажей 
+    //написать конструктор для жэнеми что бы генерировать врагов в определенной точке
+    // в цикле до вайл  создается массив врагов 
+    //в игровом  цыкле пробегаю по всем умассиву энеми и сравниваю находится ли игрок на кординатах энеми и вызов функции обрабатывающая столкновение ( бой ) 
+   // масси в врагов будет динамически т.к после победы враги будут удалятся из масива 
 }
-
-//int main()
-//{
-//    Field field;
-//    int x = 10, y = 10; // стартовые координаты $
-//    char command;
-//
-//    while (true) {
-//        field.drawField(x, y);
-//        std::cout << "\nУправление: w (вверх), a (влево), s (вниз), d (вправо). Введите команду (q — выход): ";
-//        std::cin >> command;
-//
-//        switch (command) {
-//        case 'w':
-//            if (y > 1) y--; // не заходим на верхнюю рамку (y=0)
-//            break;
-//        case 's':
-//            if (y < 48) y++; // не заходим на нижнюю рамку (y=49)
-//            break;
-//        case 'a':
-//            if (x > 1) x--; // не заходим на левую рамку (x=0)
-//            break;
-//        case 'd':
-//            if (x < 48) x++; // не заходим на правую рамку (x=49)
-//            break;
-//        case 'q':
-//            return 0;
-//        default:
-//            // игнорируем неверные команды
-//            break;
-//        }
-//    }
-//
-//    return 0;
-//}
