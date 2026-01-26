@@ -5,17 +5,87 @@
 #include <vector>
 #include <memory>
 #include <random>
+#include <algorithm>
 
+// ---------- ЮНИТЫ ----------
+class Unit {
+public:
+    int attack = 0;
+    int protection = 0;
+    int health = 0;
+    virtual ~Unit() = default; // виртуальный деструктор для полиморфизма
+};
+
+class Infantry : public Unit {
+public:
+    Infantry() {
+        attack = 1;
+        protection = 2;
+        health = 10;
+    }
+    Infantry(int complexity) {
+
+        attack = 2* complexity;
+        protection = 2 * complexity;
+        health = 10 * complexity;
+    }
+};
+
+class Cavalry : public Unit {
+public:
+    Cavalry() {
+        attack = 3;
+        protection = 3;
+        health = 15;
+    }
+};
+
+class Army {
+public:
+    std::vector<std::unique_ptr<Unit>> units;
+};
+
+// ---------- ENEMY ----------
+//обьявил выше филда, т.к в филде есть константа энеми  //уровни сложности ( размеры армии) 
+class Enemy {
+public:
+    int x{}, y{};
+    std::string name;
+    int experience = 0;
+    int gold = 0;
+    Army army;
+  
+    // Конструктор с генерацией случайной позиции , добавить сюда параметры размера войска 
+    Enemy(int fieldWidth, int fieldHeight,int countInfanty, int counCavalry) {
+        static std::mt19937 gen{ std::random_device{}() };
+
+        std::uniform_int_distribution<> dx(1, fieldWidth - 2);
+        std::uniform_int_distribution<> dy(1, fieldHeight - 2);
+
+        x = dx(gen);
+        y = dy(gen);
+
+        name = "Rebellious peasants";
+        experience = 10;
+        gold = 1 + gen() % 5;
+        // Можно задать имя, опыт, золото, армию по умолчанию или рандомно
+
+        army.units.push_back(std::make_unique<Infantry>()); //размер армии должен быть в цикле который будет генерировать количество каждого юнита
+    }
+};
+
+// ---------- FIELD ----------
 class Field {
 public:
     static constexpr int WIDTH = 50;
     static constexpr int HEIGHT = 25;
 
-    std::array<std::array<char, WIDTH>, HEIGHT> arr{}; //можно везде заменить цыфры на переменные 
+    std::array<std::array<char, WIDTH>, HEIGHT> arr{};
 
     Field() {
-        initBorders(); // только рамка
+        initBorders();
     }
+    //только рамка.Конструкция не очень хороша, если конструктор выдаст ошибку на пример при выдидении динамисческой памияти.избегать в конструкторе сложной логии.
 
     void initBorders() {
         for (auto& row : arr)
@@ -32,195 +102,112 @@ public:
         }
     }
 
-    // Новый метод: полностью перерисовать поле с игроком и врагами
+    void gotoXY(int x, int y) {
+        COORD pos{ (SHORT)x, (SHORT)y };
+        SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
+    }
+
     void renderFrame(int playerX, int playerY, const std::vector<Enemy>& enemies) {
-        // Сначала восстанавливаем рамку
         initBorders();
 
-        // Рисуем игрока
-        if (playerX >= 1 && playerX < WIDTH - 1 && playerY >= 1 && playerY < HEIGHT - 1)
+        // игрок
+        if (playerX > 0 && playerX < WIDTH - 1 &&
+            playerY > 0 && playerY < HEIGHT - 1)
             arr[playerY][playerX] = '$';
 
-        // Рисуем всех врагов
-        for (const auto& enemy : enemies) {
-            if (enemy.x >= 1 && enemy.x < WIDTH - 1 && enemy.y >= 1 && enemy.y < HEIGHT - 1)
-                arr[enemy.y][enemy.x] = '%';
+        // враги
+        for (const auto& e : enemies) {
+            if (e.x > 0 && e.x < WIDTH - 1 &&
+                e.y > 0 && e.y < HEIGHT - 1)
+                arr[e.y][e.x] = '%';
         }
 
-        // Выводим на экран
         gotoXY(0, 0);
         for (const auto& row : arr) {
             for (char c : row)
                 std::cout << c;
             std::cout << '\n';
         }
+
         std::cout << "\nW A S D — движение | Q — выход\n";
-    }
-
-    void gotoXY(int x, int y) {
-        COORD pos{ (SHORT)x, (SHORT)y };
-        SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
-    }
-};
-//Field() {
-//    initField();
-//}
-//    
-//void initField() {
-//    for (auto& row : arr)
-//        row.fill(' ');
-
-//    for (int i = 0; i < WIDTH; i++) {
-//        arr[0][i] = '-';
-//        arr[HEIGHT - 1][i] = '+';
-//    }
-
-//    for (int i = 1; i < HEIGHT - 1; i++) {
-//        arr[i][0] = '1';
-//        arr[i][WIDTH - 1] = '2';
-//    }
-//}
-
-//void drawEnemy(int x, int y) {
-//    arr[y][x] = '%';
-//}
-//void drawPlayer(int x, int y) {
-//    arr[y][x] = '$';
-//}
-
-//void clearPlayer(int x, int y) {
-//    arr[y][x] = ' ';
-//}
-
-//void gotoXY(int x, int y) {
-//    COORD pos{ (SHORT)x, (SHORT)y };
-//    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos); //вывод в консоль в конкретную кординатную позицию ( стандаотный вывод под виндоус , н оне сработает на линуксе, пос это вывод позиции )
-//}
-
-//void render() {
-//    gotoXY(0, 0);
-//    for (auto& row : arr) {
-//        for (char c : row)
-//            std::cout << c;
-//        std::cout << '\n';
-//    }
-//    std::cout << "\nW A S D — движение | Q — выход\n";
-//}
-
-};
-
-// ---------- ЮНИТЫ ----------
-class Unit {
-public:
-    int attack = 0;
-    int protection = 0;
-    int health = 0;
-    virtual ~Unit() = default;// виртуальный деструктор для полиморфизма
-};
-
-class Infantry : public Unit {
-public:
-    Infantry() { attack = 1; protection = 2; health = 10; }
-};
-
-class Cavalry : public Unit {
-public:
-    Cavalry() { attack = 3; protection = 3; health = 15; }
-};
-
-class Army {
-public:
-    std::vector<std::unique_ptr<Unit>> units;
-};
-
-// ---------- ENEMY ----------
-
-class Enemy {
-public:
-    int x, y;
-    std::string name;
-    int experience = 0;
-    int gold = 0;
-    Army army;
-
-    // Конструктор с генерацией случайной позиции
-    Enemy(int fieldWidth, int fieldHeight) {
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
-        std::uniform_int_distribution<> disX(1, fieldWidth - 2);
-        std::uniform_int_distribution<> disY(1, fieldHeight - 2);
-
-        x = disX(gen);
-        y = disY(gen);
-
-        // Можно задать имя, опыт, золото, армию по умолчанию или рандомно
-            name = "Rebellious peasants";
-        experience = 10;
-        gold = 1 + (gen() % 5); // от 1 до 5
-
-
-        army.units.push_back(std::make_unique<Infantry>(10));
-
     }
 };
 
 // ---------- HERO ----------
 class Hero {
 public:
-    std::string name;
+    std::string name = "Player";
     int experience = 0;
     int gold = 0;
     Army army;
 };
 
+// ---------- SERVICE ----------
 void hideCursor() {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    CONSOLE_CURSOR_INFO cursorInfo;
-    GetConsoleCursorInfo(hConsole, &cursorInfo);
-    cursorInfo.bVisible = false;
-    SetConsoleCursorInfo(hConsole, &cursorInfo);
-} //убирает курсор  
+    CONSOLE_CURSOR_INFO info;
+    GetConsoleCursorInfo(hConsole, &info);
+    info.bVisible = false;
+    SetConsoleCursorInfo(hConsole, &info);
+}
+//убирает курсор  
+//написать такие же функции для создания юнитов , но они будут перед тем как я буделть emplace_back
+std::vector<Enemy> createEnemies(int count, int w, int h) {
+    std::vector<Enemy> enemies;
+    enemies.reserve(count); //создание вектора с определенным размером 
+
+    for (int i = 0; i < count; ++i)
+        enemies.emplace_back(w, h); //создание обьекта 
+
+    return enemies;
+}
 
 // ---------- MAIN ----------
-
 int main() {
+
+    setlocale(LC_ALL, "Russian");
     std::ios::sync_with_stdio(false);
     std::cin.tie(nullptr);
 
     hideCursor();
+
     Field field;
+    Hero hero;
+    hero.army.units.push_back(std::make_unique<Infantry>()); //конструктор инфантри без параметров 
 
-    int playerX = 10, playerY = 10;
+    int playerX = 10;
+    int playerY = 10;
 
-    // Создаём 10 врагов
-    std::vector<Enemy> enemies = createEnemies(10, Field::WIDTH, Field::HEIGHT);
+    auto enemies = createEnemies(10, Field::WIDTH, Field::HEIGHT);
 
     // Первоначальная отрисовка
     field.renderFrame(playerX, playerY, enemies);
 
-    char key;
     while (true) {
-        int oldX = playerX, oldY = playerY;
+        int oldX = playerX;
+        int oldY = playerY;
+        char key = 0;
 
         if (_kbhit()) {
             key = _getch();
             switch (key) {
-            case 'w': case 'W': if (playerY > 1) playerY--; break;
-            case 's': case 'S': if (playerY < Field::HEIGHT - 2) playerY++; break;
-            case 'a': case 'A': if (playerX > 1) playerX--; break;
-            case 'd': case 'D': if (playerX < Field::WIDTH - 2) playerX++; break;
+            case 72: if (playerY > 1) playerY--; break;
+            case 80: if (playerY < Field::HEIGHT - 2) playerY++; break;
+            case 75: if (playerX > 1) playerX--; break;
+            case 77: if (playerX < Field::WIDTH - 2) playerX++; break;
             case 'q': case 'Q': return 0;
+           
+           
             }
         }
 
         // Проверка столкновений (опционально, но полезно)
         bool collision = false;
-        for (const auto& enemy : enemies) {
-            if (playerX == enemy.x && playerY == enemy.y) {
+        for (const auto& e : enemies) {
+            if (e.x == playerX && e.y == playerY) {
                 collision = true;
-                // Здесь можно вызвать бой: fight(hero, enemy);
-                std::cout << "\n Отряд вашего таксиарха столкнулися с " << enemy.name << "!\n";
-                Sleep(1000); // пауза для демонстрации
+                hero.experience += e.experience;
+                hero.gold += e.gold;
                 break;
             }
         }
@@ -229,75 +216,20 @@ int main() {
             //удаление врага с поля после боя 
             enemies.erase(
                 std::remove_if(enemies.begin(), enemies.end(),
-                    [&](const Enemy& e) { return e.x == playerX && e.y == playerY; }),
+                    [&](const Enemy& e) {
+                        return e.x == playerX && e.y == playerY;
+                    }),
                 enemies.end()
             );
         }
 
-        // Перерисовываю, изменения  что-то изменилось
         if (oldX != playerX || oldY != playerY || collision) {
             field.renderFrame(playerX, playerY, enemies);
+            std::cout << "EXP: " << hero.experience
+                << " | GOLD: " << hero.gold << "\n";
         }
 
         Sleep(50);
     }
 }
 
-//int main() {
-//    std::ios::sync_with_stdio(false);
-//    std::cin.tie(nullptr);
-//
-//    hideCursor();
-//    std::vector<Enemy> createEnemies(int count, int fieldWidth, int fieldHeight) {
-//        std::vector<Enemy> enemies;
-//        enemies.reserve(count);
-//        for (int i = 0; i < count; ++i) {
-//            enemies.emplace_back(fieldWidth, fieldHeight);
-//        }
-//        return enemies;
-//    };
-//
-//    Field field;
-//    int x = 10, y = 10;
-//    char key;
-//
-//    field.drawPlayer(x, y);
-// 
-//    
-//    field.render(); //перерисовывает консоль с 0 позиции 
-//    
-//   
-//    while (true) {
-//        int oldX = x, oldY = y; 
-//
-//
-//        // Проверяем, нажата ли клавиша
-//        if (_kbhit()) { 
-//            key = _getch(); // читаем символ без ожидания Enter
-//
-//            switch (key) {
-//            case 'w': case 'W': if (y > 1) y--; break;
-//            case 's': case 'S': if (y < Field::HEIGHT - 2) y++; break;
-//            case 'a': case 'A': if (x > 1) x--; break;
-//            case 'd': case 'D': if (x < Field::WIDTH - 2) x++; break;
-//            case 'q': case 'Q': return 0;
-//            }
-//        }
-//
-//        if (oldX != x || oldY != y) {
-//            field.clearPlayer(oldX, oldY);
-//            field.drawPlayer(x, y);
-//            field.drawEnemy(enemy.x, enemy.y);
-//            field.render();
-//
-//        }
-//
-//        Sleep(50); // ≈20 FPS Небольшая задержка, чтобы не грузить процессор
-//    }
-// 
-    //необходимо добавить метод размещения других персонажей 
-    //написать конструктор для жэнеми что бы генерировать врагов в определенной точке
-    // в цикле до вайл  создается массив врагов 
-    //в игровом  цыкле пробегаю по всем умассиву энеми и сравниваю находится ли игрок на кординатах энеми и вызов функции обрабатывающая столкновение ( бой ) 
-   // масси в врагов будет динамически т.к после победы враги будут удалятся из масива 
-}
